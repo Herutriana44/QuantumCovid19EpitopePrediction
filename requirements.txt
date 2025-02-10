@@ -1,0 +1,11 @@
+qiskit
+qiskit-machine-learning
+matplotlib
+numpy
+pandas
+seaborn
+scikit-learn
+joblib
+tqdm
+qiskit-algorithms
+pylatexenc
