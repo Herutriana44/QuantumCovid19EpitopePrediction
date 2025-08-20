@@ -1,0 +1,68 @@
+{
+  "final_accuracy": 0.36666666666666664,
+  "training_time": 13.502104759216309,
+  "num_epochs": 1,
+  "num_samples": 100,
+  "num_qubits": 3,
+  "test_size": 0.3,
+  "sampler_type": "aer",
+  "gpu_type": "B200:8",
+  "device": "cuda",
+  "num_train_samples": 70,
+  "num_test_samples": 30,
+  "model_parameters": 30,
+  "training_history": {
+    "train_losses": [
+      0.7310488820075989
+    ],
+    "val_losses": [
+      0.8561149835586548
+    ],
+    "train_accuracies": [
+      55.714285714285715
+    ],
+    "val_accuracies": [
+      36.666666666666664
+    ],
+    "epoch_times": [
+      13.499940872192383
+    ]
+  },
+  "classification_report": {
+    "0": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 19.0
+    },
+    "1": {
+      "precision": 0.36666666666666664,
+      "recall": 1.0,
+      "f1-score": 0.5365853658536586,
+      "support": 11.0
+    },
+    "accuracy": 0.36666666666666664,
+    "macro avg": {
+      "precision": 0.18333333333333332,
+      "recall": 0.5,
+      "f1-score": 0.2682926829268293,
+      "support": 30.0
+    },
+    "weighted avg": {
+      "precision": 0.13444444444444445,
+      "recall": 0.36666666666666664,
+      "f1-score": 0.1967479674796748,
+      "support": 30.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      0,
+      19
+    ],
+    [
+      0,
+      11
+    ]
+  ]
+}
