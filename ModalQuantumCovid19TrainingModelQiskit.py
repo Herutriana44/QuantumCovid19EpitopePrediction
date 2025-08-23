@@ -322,9 +322,9 @@ def train_vqc_gpu(
     # Create DataLoaders with larger batch sizes for maximum performance
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
     test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)  # Increased batch size
-    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)  # Increased batch size
-    
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)  # Increased batch size
+    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=8, pin_memory=True)  # Increased batch size
+
     print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
     
     # Create VQC Model with PyTorch
