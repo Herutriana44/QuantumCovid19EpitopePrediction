@@ -9,6 +9,7 @@ import modal
 import numpy as np
 from typing import Dict, Any, Optional
 import json
+import os
 
 # Define Modal image dengan semua dependencies
 image = (
@@ -42,10 +43,10 @@ volume = modal.Volume.from_name("vqc-results", create_if_missing=True)
 
 @app.function(
     gpu=["B200:8"],  # Multi-GPU B200 priority for maximum performance
-    timeout=3600*4,  # 1 hour timeout for maximum training
+    timeout=3600*4,  # 4 hour timeout for maximum training
     volumes={"/results": volume},
-    cpu=16,  # Maximum CPU cores
-    memory=32768,  # 32GB memory for large datasets
+    cpu=32,  # Maximum CPU cores for multi-GPU support
+    memory=65536,  # 64GB memory for multi-GPU training
     # secrets=[modal.Secret.from_name("wandb-secret", required=False)]  # Optional W&B logging
 )
 def train_vqc_gpu(
@@ -88,6 +89,10 @@ def train_vqc_gpu(
     import torch.nn as nn
     import torch.optim as optim
     from torch.utils.data import DataLoader, TensorDataset
+    from torch.nn.parallel import DistributedDataParallel as DDP
+    import torch.distributed as dist
+    import torch.multiprocessing as mp
+    from torch.utils.data.distributed import DistributedSampler
     
     from qiskit import QuantumCircuit
     from qiskit.circuit.library import ZZFeatureMap, RealAmplitudes
@@ -99,14 +104,46 @@ def train_vqc_gpu(
     from sklearn.model_selection import train_test_split
     from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
     
-    # Check GPU availability
+    # Setup Multi-GPU Training
+    def setup_multi_gpu():
+        """Setup multi-GPU training dengan PyTorch DDP"""
+        if torch.cuda.is_available():
+            num_gpus = torch.cuda.device_count()
+            print(f"🚀 Multi-GPU Setup: {num_gpus} GPUs detected")
+            
+            for i in range(num_gpus):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+                print(f"  Memory: {torch.cuda.get_device_properties(i).total_memory / 1e9:.1f} GB")
+            
+            # Setup distributed training environment
+            if num_gpus > 1:
+                os.environ['MASTER_ADDR'] = 'localhost'
+                os.environ['MASTER_PORT'] = '12355'
+                os.environ['WORLD_SIZE'] = str(num_gpus)
+                
+                # Initialize process group for DDP
+                try:
+                    if not dist.is_initialized():
+                        dist.init_process_group(backend='nccl', rank=0, world_size=num_gpus)
+                    print(f"✅ Distributed training initialized for {num_gpus} GPUs")
+                except Exception as e:
+                    print(f"⚠️ DDP initialization failed: {e}, using DataParallel instead")
+                    return False, num_gpus
+                
+                return True, num_gpus
+            else:
+                print("ℹ️ Single GPU training")
+                return False, 1
+        else:
+            print("⚠️ No GPU available, using CPU")
+            return False, 0
+    
+    # Check GPU availability and setup multi-GPU
     print(f"🚀 Starting VQC training for COVID-19 Epitope Prediction on Modal")
-    print(f"GPU Available: {torch.cuda.is_available()}")
-    if torch.cuda.is_available():
-        print(f"GPU Device: {torch.cuda.get_device_name(0)}")
-        print(f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
+    use_ddp, num_gpus = setup_multi_gpu()
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(f"Primary device: {device}")
     
     # Setup Aer sampler dengan GPU (dengan Colab compatibility)
     def setup_sampler_safe(sampler_type: str, use_gpu: bool, gpu_type: str):
@@ -135,16 +172,20 @@ def train_vqc_gpu(
                         test_result = test_job.result()
                         
                         # If test successful, apply GPU settings based on architecture
-                        if gpu_type == "B200":
-                            # NVIDIA Blackwell B200 - Ultimate performance
+                        if gpu_type == "B200" or gpu_type == "B200:8":
+                            # NVIDIA Blackwell B200 - Ultimate performance dengan 8-GPU optimization
                             sampler.set_options(
                                 device='GPU',
-                                max_parallel_threads=128,        # Maximum parallelization for B200
-                                max_parallel_experiments=64,    # Large batch processing
+                                max_parallel_threads=256,        # Increased untuk 8-GPU setup
+                                max_parallel_experiments=128,    # Enhanced batch processing
+                                max_parallel_shots=1000000,      # Large shot counts untuk parallel execution
                                 blocking_enable=True,
-                                precision='single'               # Optimize for speed
+                                blocking_qubits=12,               # Optimal blocking untuk complex circuits
+                                precision='single',               # Optimize untuk speed
+                                batched_optimization=True,       # Enable batch optimization
+                                memory_mb=8192                    # 8GB memory per GPU
                             )
-                            print("✓ Aer GPU B200 (Blackwell) configuration applied")
+                            print("✓ Aer GPU B200:8 (Blackwell Multi-GPU) configuration applied")
                             # if torch.cuda.is_available():
                             print(f"GPU Device: {torch.cuda.get_device_name(0)}")
                             print(f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
@@ -249,41 +290,41 @@ def train_vqc_gpu(
     except Exception as e:
         raise Exception(f"Failed to process dataset: {str(e)}")
 
-    # #@title Resample data based on 'label' column
-    # def resample_by_label(df, label_col, target_count_per_label):
-    #     """
-    #     Resamples the DataFrame to have a specified number of samples for each label.
+    #@title Resample data based on 'label' column
+    def resample_by_label(df, label_col, target_count_per_label):
+        """
+        Resamples the DataFrame to have a specified number of samples for each label.
 
-    #     Args:
-    #         df (pd.DataFrame): The input DataFrame.
-    #         label_col (str): The name of the column containing the labels.
-    #         target_count_per_label (int): The desired number of samples for each label.
+        Args:
+            df (pd.DataFrame): The input DataFrame.
+            label_col (str): The name of the column containing the labels.
+            target_count_per_label (int): The desired number of samples for each label.
 
-    #     Returns:
-    #         pd.DataFrame: The resampled DataFrame.
-    #     """
-    #     resampled_df = pd.DataFrame()
-    #     for label_value in df[label_col].unique():
-    #         label_df = df[df[label_col] == label_value]
-    #         # Use replace=True for oversampling if needed, or adjust if target_count_per_label > len(label_df)
-    #         resampled_label_df = label_df.sample(n=target_count_per_label, replace=False, random_state=42)
-    #         resampled_df = pd.concat([resampled_df, resampled_label_df])
+        Returns:
+            pd.DataFrame: The resampled DataFrame.
+        """
+        resampled_df = pd.DataFrame()
+        for label_value in df[label_col].unique():
+            label_df = df[df[label_col] == label_value]
+            # Use replace=True for oversampling if needed, or adjust if target_count_per_label > len(label_df)
+            resampled_label_df = label_df.sample(n=target_count_per_label, replace=False, random_state=42)
+            resampled_df = pd.concat([resampled_df, resampled_label_df])
 
-    #     # Shuffle the resampled data to mix the labels
-    #     resampled_df = resampled_df.sample(frac=1, random_state=42).reset_index(drop=True)
-    #     return resampled_df
+        # Shuffle the resampled data to mix the labels
+        resampled_df = resampled_df.sample(frac=1, random_state=42).reset_index(drop=True)
+        return resampled_df
 
-    # # Resample the DataFrame to have 50 'E' and 50 '.' labels
-    # target_samples_per_label = 50
-    # df_resampled = resample_by_label(df, 'label', target_samples_per_label)
+    # Resample the DataFrame to have 50 'E' and 50 '.' labels
+    target_samples_per_label = 500
+    df_resampled = resample_by_label(df, 'label', target_samples_per_label)
 
-    # print(f"Original DataFrame length: {len(df)}")
-    # print(f"Resampled DataFrame length: {len(df_resampled)}")
-    # print("Value counts in resampled DataFrame:")
-    # print(df_resampled['label'].value_counts())
+    print(f"Original DataFrame length: {len(df)}")
+    print(f"Resampled DataFrame length: {len(df_resampled)}")
+    print("Value counts in resampled DataFrame:")
+    print(df_resampled['label'].value_counts())
 
-    # # Update the original dataframe reference to the resampled one for subsequent steps
-    # df = df_resampled
+    # Update the original dataframe reference to the resampled one for subsequent steps
+    df = df_resampled
     
     # Label conversion function
     def label_to_numeric(label_str):
@@ -314,16 +355,62 @@ def train_vqc_gpu(
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, shuffle=False)
     
     # Convert to PyTorch tensors (without scaling)
-    X_train_tensor = torch.FloatTensor(X_train).to(device)
-    y_train_tensor = torch.LongTensor(y_train).to(device)
-    X_test_tensor = torch.FloatTensor(X_test).to(device)
-    y_test_tensor = torch.LongTensor(y_test).to(device)
+    X_train_tensor = torch.FloatTensor(X_train)
+    y_train_tensor = torch.LongTensor(y_train)
+    X_test_tensor = torch.FloatTensor(X_test)
+    y_test_tensor = torch.LongTensor(y_test)
     
-    # Create DataLoaders with larger batch sizes for maximum performance
+    # Create datasets
     train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
     test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
-    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=8, pin_memory=True)  # Increased batch size
-    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=8, pin_memory=True)  # Increased batch size
+    
+    # Setup DataLoaders dengan multi-GPU optimization
+    # Batch size scaling untuk multi-GPU: base_batch_size * num_gpus
+    base_batch_size = 64  # Base batch size per GPU
+    effective_batch_size = base_batch_size * max(1, num_gpus)
+    print(f"Batch size: {base_batch_size} per GPU, effective: {effective_batch_size}")
+    
+    if use_ddp and num_gpus > 1:
+        # Distributed training dengan DistributedSampler
+        train_sampler = DistributedSampler(train_dataset, num_replicas=num_gpus, rank=0)
+        test_sampler = DistributedSampler(test_dataset, num_replicas=num_gpus, rank=0, shuffle=False)
+        
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=base_batch_size,  # Per GPU batch size
+            sampler=train_sampler,
+            num_workers=4,  # Optimal untuk B200
+            pin_memory=True,
+            persistent_workers=True
+        )
+        test_loader = DataLoader(
+            test_dataset, 
+            batch_size=base_batch_size,  # Per GPU batch size
+            sampler=test_sampler,
+            num_workers=4,
+            pin_memory=True,
+            persistent_workers=True
+        )
+        print(f"✅ DistributedDataLoader setup for {num_gpus} GPUs")
+    else:
+        # Single GPU atau DataParallel
+        train_loader = DataLoader(
+            train_dataset, 
+            batch_size=effective_batch_size, 
+            shuffle=True,
+            num_workers=8,  # More workers for single/DataParallel mode
+            pin_memory=True,
+            persistent_workers=True
+        )
+        test_loader = DataLoader(
+            test_dataset, 
+            batch_size=effective_batch_size, 
+            shuffle=False,
+            num_workers=8,
+            pin_memory=True,
+            persistent_workers=True
+        )
+        print(f"✅ Standard DataLoader setup with batch size: {effective_batch_size}")
 
     print(f"Training samples: {len(X_train)}, Test samples: {len(X_test)}")
     
@@ -331,14 +418,18 @@ def train_vqc_gpu(
     print("🔬 Creating VQC model...")
     
     class COVID19VQC(nn.Module):
-        def __init__(self, input_dim: int, num_qubits: int, sampler):
+        def __init__(self, input_dim: int, num_qubits: int, sampler, num_gpus: int = 1):
             super().__init__()
             
-            # Classical preprocessing
-            self.classical_input = nn.Linear(input_dim, num_qubits)
-            self.activation = nn.ReLU()
+            self.num_gpus = num_gpus
             
-            # Quantum layer - using original parameters (reps=2 for feature_map, reps=3 for ansatz)
+            # Classical preprocessing dengan batch normalization untuk stability
+            self.classical_input = nn.Linear(input_dim, num_qubits)
+            self.batch_norm = nn.BatchNorm1d(num_qubits)
+            self.activation = nn.ReLU()
+            self.dropout = nn.Dropout(0.1)  # Small dropout untuk regularization
+            
+            # Quantum layer - optimized untuk multi-GPU
             feature_map = ZZFeatureMap(feature_dimension=num_qubits, reps=2, entanglement="full")
             ansatz = RealAmplitudes(num_qubits=num_qubits, entanglement='full', reps=3)
             
@@ -346,6 +437,7 @@ def train_vqc_gpu(
             qc.compose(feature_map, inplace=True)
             qc.compose(ansatz, inplace=True)
             
+            # Optimize quantum execution untuk multi-GPU
             qnn = SamplerQNN(
                 sampler=sampler,
                 circuit=qc,
@@ -356,23 +448,76 @@ def train_vqc_gpu(
                 input_gradients=True
             )
             
-            initial_weights = np.random.uniform(-0.1, 0.1, qnn.num_weights)
+            # Improved weight initialization untuk better convergence
+            initial_weights = np.random.normal(0, 0.05, qnn.num_weights)  # Smaller variance
             self.quantum_layer = TorchConnector(qnn, initial_weights)
             
-            # Classical output
-            self.output_layer = nn.Linear(2, 2)
+            # Enhanced classical output dengan residual connection
+            self.output_layer = nn.Sequential(
+                nn.Linear(2, 8),
+                nn.ReLU(),
+                nn.Dropout(0.1),
+                nn.Linear(8, 2)
+            )
             
         def forward(self, x):
-            x = self.classical_input(x)
-            x = self.activation(x)
-            x = self.quantum_layer(x)
-            x = self.output_layer(x)
-            return x
+            # Classical preprocessing
+            x_classical = self.classical_input(x)
+            if x_classical.size(0) > 1:  # Batch norm only if batch size > 1
+                x_classical = self.batch_norm(x_classical)
+            x_classical = self.activation(x_classical)
+            x_classical = self.dropout(x_classical)
+            
+            # Quantum processing
+            x_quantum = self.quantum_layer(x_classical)
+            
+            # Classical output
+            output = self.output_layer(x_quantum)
+            
+            return output
     
-    # Initialize model
-    model = COVID19VQC(X.shape[1], num_qubits, sampler).to(device)
-    optimizer = optim.Adam(model.parameters(), lr=0.01)  # Using Adam optimizer for PyTorch training
-    criterion = nn.CrossEntropyLoss()
+    # Initialize model dengan multi-GPU support
+    model = COVID19VQC(X.shape[1], num_qubits, sampler, num_gpus=num_gpus)
+    
+    # Multi-GPU model setup
+    if torch.cuda.is_available():
+        model = model.to(device)
+        
+        if use_ddp and num_gpus > 1:
+            # DistributedDataParallel untuk optimal multi-GPU training
+            model = DDP(model, device_ids=[0], find_unused_parameters=True)
+            print(f"✅ DistributedDataParallel setup with {num_gpus} GPUs")
+        elif num_gpus > 1:
+            # DataParallel sebagai fallback
+            model = nn.DataParallel(model)
+            print(f"✅ DataParallel setup with {num_gpus} GPUs")
+        else:
+            print(f"✅ Single GPU setup")
+    
+    # Optimizer dengan learning rate scaling untuk multi-GPU
+    base_lr = 0.01
+    scaled_lr = base_lr * max(1, num_gpus)  # Scale learning rate dengan number of GPUs
+    optimizer = optim.AdamW(  # AdamW untuk better regularization
+        model.parameters(), 
+        lr=scaled_lr,
+        weight_decay=1e-4,  # L2 regularization
+        betas=(0.9, 0.999),
+        eps=1e-8
+    )
+    
+    # Learning rate scheduler untuk adaptive learning
+    scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+        optimizer, 
+        T_0=10,  # Restart every 10 epochs
+        T_mult=2,
+        eta_min=1e-6
+    )
+    
+    # Loss function dengan label smoothing untuk better generalization
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+    
+    # Gradient scaler untuk mixed precision training (optional optimization)
+    scaler = torch.cuda.amp.GradScaler() if torch.cuda.is_available() else None
     
     print(f"VQC created with {num_qubits} qubits")
     print(f"Model parameters: {sum(p.numel() for p in model.parameters())}")
@@ -395,15 +540,41 @@ def train_vqc_gpu(
         
         train_pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} - Training", leave=False)
         for batch_idx, (data, target) in enumerate(train_pbar):
+            # Move data to device
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+            
             optimizer.zero_grad()
-            output = model(data)
-            loss = criterion(output, target)
-            loss.backward()
             
-            # Gradient clipping
-            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            # Mixed precision training untuk memory efficiency
+            if scaler and torch.cuda.is_available():
+                with torch.cuda.amp.autocast():
+                    output = model(data)
+                    loss = criterion(output, target)
+                
+                # Scaled backward pass
+                scaler.scale(loss).backward()
+                
+                # Gradient clipping dengan scaling
+                scaler.unscale_(optimizer)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                
+                # Optimizer step dengan scaling
+                scaler.step(optimizer)
+                scaler.update()
+            else:
+                # Standard training
+                output = model(data)
+                loss = criterion(output, target)
+                loss.backward()
+                
+                # Gradient clipping
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+                
+                optimizer.step()
             
-            optimizer.step()
+            # Synchronize gradients untuk DDP
+            if use_ddp and num_gpus > 1:
+                torch.distributed.barrier()
             
             total_loss += loss.item()
             _, predicted = output.max(1)
@@ -412,10 +583,16 @@ def train_vqc_gpu(
             
             # Update progress bar with current metrics
             current_acc = 100. * correct / total if total > 0 else 0
+            current_lr = optimizer.param_groups[0]['lr']
             train_pbar.set_postfix({
                 'Loss': f'{loss.item():.4f}',
-                'Acc': f'{current_acc:.2f}%'
+                'Acc': f'{current_acc:.2f}%',
+                'LR': f'{current_lr:.6f}'
             })
+            
+            # Memory cleanup untuk large batches
+            if batch_idx % 10 == 0 and torch.cuda.is_available():
+                torch.cuda.empty_cache()
         
         train_loss = total_loss / len(train_loader)
         train_acc = 100. * correct / total
@@ -429,8 +606,18 @@ def train_vqc_gpu(
         with torch.no_grad():
             val_pbar = tqdm(test_loader, desc=f"Epoch {epoch+1}/{num_epochs} - Validation", leave=False)
             for data, target in val_pbar:
-                output = model(data)
-                loss = criterion(output, target)
+                # Move data to device
+                data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+                
+                # Mixed precision untuk validation
+                if scaler and torch.cuda.is_available():
+                    with torch.cuda.amp.autocast():
+                        output = model(data)
+                        loss = criterion(output, target)
+                else:
+                    output = model(data)
+                    loss = criterion(output, target)
+                
                 val_loss += loss.item()
                 _, predicted = output.max(1)
                 val_total += target.size(0)
@@ -452,10 +639,22 @@ def train_vqc_gpu(
         training_history['accuracy'].append((train_acc, val_acc))
         training_history['epoch_times'].append(epoch_time)
         
+        # Step scheduler
+        scheduler.step()
+        current_lr = optimizer.param_groups[0]['lr']
+        
         print(f"Epoch {epoch+1:2d}/{num_epochs}: "
               f"Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}% | "
               f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}% | "
-              f"Time: {epoch_time:.1f}s")
+              f"Time: {epoch_time:.1f}s | LR: {current_lr:.6f}")
+        
+        # Memory cleanup setelah each epoch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            
+        # Update distributed sampler epoch untuk shuffling
+        if use_ddp and hasattr(train_loader.sampler, 'set_epoch'):
+            train_loader.sampler.set_epoch(epoch)
     
     total_training_time = time.time() - start_time
     
@@ -467,7 +666,16 @@ def train_vqc_gpu(
     
     with torch.no_grad():
         for data, target in test_loader:
-            output = model(data)
+            # Move data to device
+            data, target = data.to(device, non_blocking=True), target.to(device, non_blocking=True)
+            
+            # Mixed precision untuk final evaluation
+            if scaler and torch.cuda.is_available():
+                with torch.cuda.amp.autocast():
+                    output = model(data)
+            else:
+                output = model(data)
+                
             _, predicted = torch.max(output.data, 1)
             final_predictions.extend(predicted.cpu().numpy())
             final_targets.extend(target.cpu().numpy())
@@ -534,7 +742,7 @@ def train_vqc_gpu(
     
     plt.close()
     
-    # Save detailed results
+    # Save detailed results dengan multi-GPU information
     results = {
         'final_accuracy': float(final_accuracy),
         'training_time': total_training_time,
@@ -548,12 +756,30 @@ def train_vqc_gpu(
         'num_train_samples': len(X_train),
         'num_test_samples': len(X_test),
         'model_parameters': sum(p.numel() for p in model.parameters()),
+        # Multi-GPU training information
+        'multi_gpu_info': {
+            'num_gpus': num_gpus,
+            'use_ddp': use_ddp,
+            'base_batch_size': base_batch_size,
+            'effective_batch_size': effective_batch_size,
+            'base_lr': base_lr,
+            'scaled_lr': scaled_lr,
+            'parallel_training': 'DistributedDataParallel' if use_ddp else ('DataParallel' if num_gpus > 1 else 'Single GPU'),
+            'memory_optimization': 'Mixed Precision + Auto Cleanup',
+            'quantum_optimization': 'B200 Multi-GPU Sampler Configuration'
+        },
         'training_history': {
             'train_losses': train_losses,
             'val_losses': val_losses,
             'train_accuracies': train_accs,
             'val_accuracies': val_accs,
             'epoch_times': training_history['epoch_times']
+        },
+        'performance_metrics': {
+            'avg_epoch_time': float(np.mean(training_history['epoch_times'])),
+            'total_training_time': total_training_time,
+            'samples_per_second': len(X_train) * num_epochs / total_training_time,
+            'gpu_efficiency': f"{effective_batch_size}/{num_gpus} samples per GPU per batch"
         },
         'classification_report': classification_report(final_targets, final_predictions, output_dict=True),
         'confusion_matrix': conf_matrix.tolist()
@@ -573,17 +799,29 @@ def train_vqc_gpu(
     
     # Save trained model state
     try:
+        # Extract model state dari DDP/DataParallel wrapper
+        if hasattr(model, 'module'):
+            model_state = model.module.state_dict()
+        else:
+            model_state = model.state_dict()
+            
         # Save to Modal volume
         model_data = {
-            'model_state_dict': model.state_dict(),
+            'model_state_dict': model_state,
             'optimizer_state_dict': optimizer.state_dict(),
+            'scheduler_state_dict': scheduler.state_dict(),
             'final_accuracy': final_accuracy,
             'num_qubits': num_qubits,
+            'num_gpus': num_gpus,
+            'use_ddp': use_ddp,
             'training_params': {
                 'num_epochs': num_epochs,
                 'test_size': test_size,
                 'sampler_type': sampler_type,
-                'gpu_type': gpu_type
+                'gpu_type': gpu_type,
+                'base_batch_size': base_batch_size,
+                'effective_batch_size': effective_batch_size,
+                'scaled_lr': scaled_lr
             }
         }
         
@@ -597,10 +835,23 @@ def train_vqc_gpu(
     except Exception as e:
         print(f"⚠️ Could not save trained model: {str(e)}")
     
+    # Cleanup distributed training
+    if use_ddp and dist.is_initialized():
+        dist.destroy_process_group()
+        print("✅ Distributed training cleaned up")
+    
+    # Final memory cleanup
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+    
     print(f"✅ VQC Training completed!")
     print(f"Final Accuracy: {final_accuracy:.4f}")
     print(f"Training Time: {total_training_time:.1f}s")
     print(f"Average Epoch Time: {np.mean(training_history['epoch_times']):.1f}s")
+    print(f"Multi-GPU Setup: {num_gpus} GPUs, DDP: {use_ddp}")
+    print(f"Batch Size: {base_batch_size} per GPU, Effective: {effective_batch_size}")
+    print(f"Learning Rate: {scaled_lr:.6f} (scaled from {base_lr})")
     print(f"Samples processed: {len(df)} total, {len(X_train)} train, {len(X_test)} test")
     print(f"Classification Report:")
     print(classification_report(final_targets, final_predictions))
@@ -610,10 +861,10 @@ def train_vqc_gpu(
 
 @app.function(
     gpu=["B200:8"],  # B200 with multi-GPU support
-    timeout=3600*4,  # 2 hours for comprehensive benchmark with maximum parameters
+    timeout=3600*4,  # 4 hours for comprehensive benchmark with maximum parameters
     volumes={"/results": volume},
-    cpu=16,  # Maximum CPU cores
-    memory=32768  # 32GB memory
+    cpu=32,  # Maximum CPU cores untuk multi-GPU
+    memory=65536  # 64GB memory untuk multi-GPU benchmark
 )
 def benchmark_samplers() -> Dict[str, Any]:
     """
@@ -626,10 +877,11 @@ def benchmark_samplers() -> Dict[str, Any]:
     
     print("🔥 Starting comprehensive sampler benchmark on Modal...")
     
-    # Test configurations including B200
+    # Test configurations including B200:8 multi-GPU
     configs = [
         {'sampler_type': 'aer', 'use_gpu': False, 'name': 'Aer CPU'},
-        {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'B200', 'name': 'Aer GPU B200 (Blackwell)'},
+        {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'B200:8', 'name': 'Aer GPU B200:8 (Multi-GPU)'},
+        {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'B200', 'name': 'Aer GPU B200 (Single)'},
         {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'H200', 'name': 'Aer GPU H200'},
         {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'H100', 'name': 'Aer GPU H100'},
         {'sampler_type': 'aer', 'use_gpu': True, 'gpu_type': 'A100', 'name': 'Aer GPU A100'},
@@ -653,7 +905,7 @@ def benchmark_samplers() -> Dict[str, Any]:
                 test_size=0.3,
                 sampler_type=config['sampler_type'],
                 use_gpu=config.get('use_gpu', False),
-                gpu_type=config.get('gpu_type', 'B200')
+                gpu_type=config.get('gpu_type', 'B200:8')
             )
             
             benchmark_time = time.time() - start_time
@@ -1019,25 +1271,38 @@ def main(
 
 if __name__ == "__main__":
     # Example usage
-    print("COVID-19 Epitope Prediction VQC on Modal - Ready to deploy!")
+    print("COVID-19 Epitope Prediction VQC on Modal - Multi-GPU Parallel Training Ready!")
     print("Dataset will be downloaded from GitHub automatically")
     print("Results will be saved both in Modal volume and local directory")
     print("")
+    print("🚀 MULTI-GPU PARALLEL TRAINING FEATURES:")
+    print("  ✅ DistributedDataParallel (DDP) for optimal GPU utilization")
+    print("  ✅ Mixed precision training with gradient scaling")
+    print("  ✅ Adaptive learning rate scaling based on GPU count")
+    print("  ✅ Memory optimization with automatic cleanup")
+    print("  ✅ Enhanced quantum circuit parallelization")
+    print("")
     print("Example commands:")
-    print("  # Training with auto-download to local (default behavior)")
-    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=train --gpu-type=B200:8 --epochs=2")
+    print("  # Multi-GPU training with B200:8 (8 GPUs)")
+    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=train --gpu-type=B200:8 --epochs=5")
     print("")
-    print("  # Training without auto-download")
-    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=train --gpu-type=B200:8 --epochs=2 --no-auto-download")
+    print("  # Training with specific batch size per GPU")
+    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=train --gpu-type=B200:8 --epochs=10 --no-auto-download")
     print("")
-    print("  # Download only existing results")
-    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=download --local-results-dir=./my_results")
-    print("")
-    print("  # Benchmark different samplers")
+    print("  # Comprehensive multi-GPU benchmark")
     print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=benchmark")
+    print("")
+    print("  # Download results after training")
+    print("  modal run ModalQuantumCovid19TrainingModelQiskit.py --action=download --local-results-dir=./results")
+    print("")
+    print("Multi-GPU Optimizations:")
+    print("  🔥 Batch size: 64 per GPU × 8 GPUs = 512 effective batch size")
+    print("  🔥 Learning rate: Auto-scaled based on GPU count")
+    print("  🔥 Quantum circuits: Parallel execution with B200 optimization")
+    print("  🔥 Memory: 64GB total with automatic cleanup")
     print("")
     print("Files that will be saved locally:")
     print("  - modal_vqc_training_results.png (training plots & confusion matrix)")
-    print("  - modal_vqc_results.json (detailed training metrics)")
-    print("  - modal_vqc_model.pth (trained PyTorch model)")
-    print("  - modal_sampler_benchmark.json (benchmark results if available)")
+    print("  - modal_vqc_results.json (detailed training metrics + multi-GPU info)")
+    print("  - modal_vqc_model.pth (trained PyTorch model with DDP state)")
+    print("  - modal_sampler_benchmark.json (multi-GPU benchmark results)")

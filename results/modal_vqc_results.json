@@ -1,6 +1,6 @@
 {
   "final_accuracy": 0.36666666666666664,
-  "training_time": 13.502104759216309,
+  "training_time": 11.908708333969116,
   "num_epochs": 1,
   "num_samples": 100,
   "num_qubits": 3,
@@ -13,10 +13,10 @@
   "model_parameters": 30,
   "training_history": {
     "train_losses": [
-      0.7310488820075989
+      0.6844568252563477
     ],
     "val_losses": [
-      0.8561149835586548
+      0.7619593143463135
     ],
     "train_accuracies": [
       55.714285714285715
@@ -25,7 +25,7 @@
       36.666666666666664
     ],
     "epoch_times": [
-      13.499940872192383
+      11.905720233917236
     ]
   },
   "classification_report": {

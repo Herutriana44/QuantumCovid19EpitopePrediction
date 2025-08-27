@@ -1,0 +1,253 @@
+\documentclass[12pt]{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{physics}
+\usepackage{bm}
+\usepackage{tikz}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\title{Mathematical Formulation of Variational Quantum Classifier (VQC) \\
+for COVID-19 Epitope Prediction: Inference Process}
+\author{VQC Mathematical Framework}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This document presents the complete mathematical formulation for the Variational Quantum Classifier (VQC) inference process used in COVID-19 epitope prediction. We trace the computation from input features through classical preprocessing, quantum feature mapping, ansatz application, measurement, and final classification.
+
+\section{Input Data Example}
+Consider an input sample with three features representing COVID-19 protein characteristics:
+\begin{equation}
+\mathbf{x}_{\text{raw}} = \begin{pmatrix} 1 \\ 4 \\ 10 \end{pmatrix}
+\end{equation}
+where the features represent:
+\begin{itemize}
+    \item $x_1 = 1$: Position in protein sequence
+    \item $x_2 = 4$: Length of sequence
+    \item $x_3 = 10$: Numerical amino acid encoding
+\end{itemize}
+
+\section{Classical Preprocessing Layer}
+
+\subsection{Linear Transformation}
+The raw input undergoes linear transformation through a fully connected layer:
+\begin{equation}
+\mathbf{z} = \mathbf{W}_{\text{classical}} \mathbf{x}_{\text{raw}} + \mathbf{b}_{\text{classical}}
+\end{equation}
+
+For a 3-qubit system with weight matrix $\mathbf{W}_{\text{classical}} \in \mathbb{R}^{3 \times 3}$ and bias $\mathbf{b}_{\text{classical}} \in \mathbb{R}^3$:
+\begin{equation}
+\begin{pmatrix} z_1 \\ z_2 \\ z_3 \end{pmatrix} = 
+\begin{pmatrix} 
+w_{11} & w_{12} & w_{13} \\
+w_{21} & w_{22} & w_{23} \\
+w_{31} & w_{32} & w_{33}
+\end{pmatrix}
+\begin{pmatrix} 1 \\ 4 \\ 10 \end{pmatrix} +
+\begin{pmatrix} b_1 \\ b_2 \\ b_3 \end{pmatrix}
+\end{equation}
+
+\subsection{Batch Normalization}
+The linear output is normalized:
+\begin{equation}
+\hat{z}_i = \frac{z_i - \mu_i}{\sqrt{\sigma_i^2 + \epsilon}} \gamma_i + \beta_i
+\end{equation}
+where $\mu_i$ and $\sigma_i^2$ are the batch mean and variance, $\gamma_i$ and $\beta_i$ are learnable parameters, and $\epsilon$ is a small constant for numerical stability.
+
+\subsection{Activation and Dropout}
+Apply ReLU activation followed by dropout:
+\begin{align}
+\mathbf{x}_{\text{processed}} &= \text{Dropout}(\text{ReLU}(\hat{\mathbf{z}})) \\
+&= \text{Dropout}(\max(0, \hat{\mathbf{z}}))
+\end{align}
+
+For our example, assume the processed features are:
+\begin{equation}
+\mathbf{x}_{\text{processed}} = \begin{pmatrix} 0.7 \\ 1.2 \\ -0.3 \end{pmatrix}
+\end{equation}
+
+\section{Quantum Feature Mapping}
+
+\subsection{ZZ Feature Map}
+The quantum feature map encodes classical data into quantum states using ZZ interactions. For a 3-qubit system with $r=2$ repetitions:
+
+\subsubsection{Initial State Preparation}
+Start with the computational basis state $\ket{000}$ and apply Hadamard gates:
+\begin{equation}
+\ket{\psi_0} = H^{\otimes 3} \ket{000} = \frac{1}{2\sqrt{2}} \sum_{i,j,k \in \{0,1\}} \ket{ijk}
+\end{equation}
+
+\subsubsection{ZZ Feature Encoding}
+For each repetition $r$ and each qubit pair $(i,j)$, apply:
+\begin{equation}
+U_{\text{ZZ}}(\mathbf{x}) = \prod_{r=1}^{2} \prod_{\substack{i,j=0 \\ i<j}}^{2} e^{-i x_i x_j Z_i Z_j}
+\end{equation}
+
+The specific ZZ rotations for our 3-qubit system are:
+\begin{align}
+U_{\text{ZZ}}(\mathbf{x}) &= e^{-i x_1 x_2 Z_0 Z_1} e^{-i x_1 x_3 Z_0 Z_2} e^{-i x_2 x_3 Z_1 Z_2} \\
+&\quad \times e^{-i x_1 x_2 Z_0 Z_1} e^{-i x_1 x_3 Z_0 Z_2} e^{-i x_2 x_3 Z_1 Z_2}
+\end{align}
+
+For our example with $\mathbf{x}_{\text{processed}} = (0.7, 1.2, -0.3)$:
+\begin{align}
+U_{\text{ZZ}} &= e^{-i (0.7)(1.2) Z_0 Z_1} e^{-i (0.7)(-0.3) Z_0 Z_2} e^{-i (1.2)(-0.3) Z_1 Z_2} \\
+&\quad \times e^{-i (0.7)(1.2) Z_0 Z_1} e^{-i (0.7)(-0.3) Z_0 Z_2} e^{-i (1.2)(-0.3) Z_1 Z_2} \\
+&= e^{-i 0.84 Z_0 Z_1} e^{i 0.21 Z_0 Z_2} e^{i 0.36 Z_1 Z_2} \\
+&\quad \times e^{-i 0.84 Z_0 Z_1} e^{i 0.21 Z_0 Z_2} e^{i 0.36 Z_1 Z_2}
+\end{align}
+
+\subsubsection{Complete Feature Map}
+The complete feature map state after encoding:
+\begin{equation}
+\ket{\psi_{\text{feature}}} = U_{\text{ZZ}}(\mathbf{x}_{\text{processed}}) \cdot H^{\otimes 3} \ket{000}
+\end{equation}
+
+\section{Variational Ansatz (RealAmplitudes)}
+
+\subsection{Ansatz Structure}
+The RealAmplitudes ansatz with 3 repetitions applies alternating layers of parameterized rotations and entangling gates:
+
+\begin{equation}
+U_{\text{ansatz}}(\boldsymbol{\theta}) = \prod_{r=1}^{3} \left[ U_{\text{ent}} \prod_{i=0}^{2} R_Y(\theta_{r,i}) \right]
+\end{equation}
+
+where $U_{\text{ent}}$ represents the entangling layer with CNOT gates in a circular pattern.
+
+\subsubsection{Parameterized Rotations}
+For each layer $r$ and qubit $i$:
+\begin{equation}
+R_Y(\theta_{r,i}) = \begin{pmatrix}
+\cos(\theta_{r,i}/2) & -\sin(\theta_{r,i}/2) \\
+\sin(\theta_{r,i}/2) & \cos(\theta_{r,i}/2)
+\end{pmatrix}
+\end{equation}
+
+\subsubsection{Entangling Gates}
+The entangling layer applies CNOT gates:
+\begin{equation}
+U_{\text{ent}} = \text{CNOT}_{0,1} \otimes I_2 \cdot I_0 \otimes \text{CNOT}_{1,2} \cdot \text{CNOT}_{2,0} \otimes I_1
+\end{equation}
+
+\subsubsection{Complete Ansatz Application}
+The quantum state after ansatz application:
+\begin{equation}
+\ket{\psi_{\text{ansatz}}} = U_{\text{ansatz}}(\boldsymbol{\theta}) \ket{\psi_{\text{feature}}}
+\end{equation}
+
+\section{Quantum Neural Network Output}
+
+\subsection{Measurement and Expectation Values}
+The SamplerQNN measures expectation values of Pauli observables. For a 2-class classification with output shape 2:
+
+\begin{equation}
+\text{Observable}_k = \bigotimes_{i=0}^{2} \sigma_i^{(k)}
+\end{equation}
+
+where $\sigma_i^{(k)} \in \{I, X, Y, Z\}$ are Pauli matrices.
+
+\subsubsection{Expectation Value Calculation}
+For each observable $O_k$:
+\begin{equation}
+\langle O_k \rangle = \langle \psi_{\text{ansatz}} | O_k | \psi_{\text{ansatz}} \rangle
+\end{equation}
+
+\subsubsection{Measurement Interpretation}
+The interpret function applies modulo 2 operation:
+\begin{equation}
+y_{\text{quantum},k} = \langle O_k \rangle \bmod 2
+\end{equation}
+
+This produces the quantum layer output:
+\begin{equation}
+\mathbf{y}_{\text{quantum}} = \begin{pmatrix} y_{\text{quantum},0} \\ y_{\text{quantum},1} \end{pmatrix}
+\end{equation}
+
+\section{Classical Output Processing}
+
+\subsection{Enhanced Classical Network}
+The quantum output undergoes further classical processing:
+
+\begin{align}
+\mathbf{h} &= \text{ReLU}(\mathbf{W}_1 \mathbf{y}_{\text{quantum}} + \mathbf{b}_1) \\
+\mathbf{h}_{\text{dropout}} &= \text{Dropout}(\mathbf{h}) \\
+\mathbf{y}_{\text{logits}} &= \mathbf{W}_2 \mathbf{h}_{\text{dropout}} + \mathbf{b}_2
+\end{align}
+
+where $\mathbf{W}_1 \in \mathbb{R}^{8 \times 2}$, $\mathbf{W}_2 \in \mathbb{R}^{2 \times 8}$ are weight matrices.
+
+\subsection{Final Classification}
+Apply softmax for probability distribution:
+\begin{equation}
+P(y = c | \mathbf{x}) = \frac{\exp(y_{\text{logits},c})}{\sum_{k=0}^{1} \exp(y_{\text{logits},k})}
+\end{equation}
+
+The predicted class is:
+\begin{equation}
+\hat{y} = \arg\max_c P(y = c | \mathbf{x})
+\end{equation}
+
+\section{Complete VQC Inference Algorithm}
+
+\begin{algorithm}
+\caption{VQC Inference for COVID-19 Epitope Prediction}
+\begin{algorithmic}[1]
+\REQUIRE Input features $\mathbf{x}_{\text{raw}} = (1, 4, 10)$
+\REQUIRE Trained parameters $\boldsymbol{\theta}$, $\mathbf{W}_{\text{classical}}$, $\mathbf{W}_1$, $\mathbf{W}_2$
+\ENSURE Predicted label $\hat{y} \in \{0, 1\}$ (Non-Epitope, Epitope)
+
+\STATE $\mathbf{z} \leftarrow \mathbf{W}_{\text{classical}} \mathbf{x}_{\text{raw}} + \mathbf{b}_{\text{classical}}$
+\STATE $\mathbf{x}_{\text{processed}} \leftarrow \text{Dropout}(\text{ReLU}(\text{BatchNorm}(\mathbf{z})))$
+\STATE $\ket{\psi_0} \leftarrow H^{\otimes 3} \ket{000}$
+\STATE $\ket{\psi_{\text{feature}}} \leftarrow U_{\text{ZZ}}(\mathbf{x}_{\text{processed}}) \ket{\psi_0}$
+\STATE $\ket{\psi_{\text{ansatz}}} \leftarrow U_{\text{ansatz}}(\boldsymbol{\theta}) \ket{\psi_{\text{feature}}}$
+\FOR{$k = 0$ to $1$}
+    \STATE $\langle O_k \rangle \leftarrow \langle \psi_{\text{ansatz}} | O_k | \psi_{\text{ansatz}} \rangle$
+    \STATE $y_{\text{quantum},k} \leftarrow \langle O_k \rangle \bmod 2$
+\ENDFOR
+\STATE $\mathbf{h} \leftarrow \text{ReLU}(\mathbf{W}_1 \mathbf{y}_{\text{quantum}} + \mathbf{b}_1)$
+\STATE $\mathbf{y}_{\text{logits}} \leftarrow \mathbf{W}_2 \text{Dropout}(\mathbf{h}) + \mathbf{b}_2$
+\STATE $\mathbf{P} \leftarrow \text{Softmax}(\mathbf{y}_{\text{logits}})$
+\STATE $\hat{y} \leftarrow \arg\max_c P_c$
+\RETURN $\hat{y}$
+\end{algorithmic}
+\end{algorithm}
+
+\section{Computational Complexity}
+
+\subsection{Classical Layers}
+- Linear transformations: $O(d^2)$ where $d$ is feature dimension
+- Batch normalization: $O(d)$
+- Activation functions: $O(d)$
+
+\subsection{Quantum Computation}
+- Feature map gates: $O(n^2 \cdot r)$ where $n$ is number of qubits, $r$ is repetitions
+- Ansatz gates: $O(n \cdot r)$ for parameterized gates + $O(n)$ for entangling gates
+- Measurement: $O(2^n)$ for exact simulation, $O(\text{shots})$ for sampling
+
+\subsection{Total Complexity}
+For our 3-qubit system:
+- Classical: $O(1)$ (constant feature dimension)
+- Quantum: $O(8)$ for exact simulation or $O(\text{shots})$ for sampling
+- Overall: Dominated by quantum measurement complexity
+
+\section{Gradient Computation}
+
+For training, gradients with respect to quantum parameters use the parameter-shift rule:
+\begin{equation}
+\frac{\partial}{\partial \theta_i} \langle O \rangle = \frac{1}{2} \left[ \langle O \rangle_{\theta_i + \pi/2} - \langle O \rangle_{\theta_i - \pi/2} \right]
+\end{equation}
+
+This enables end-to-end training of the hybrid classical-quantum model using standard backpropagation combined with quantum-specific gradient rules.
+
+\section{Conclusion}
+
+This mathematical framework provides a complete description of the VQC inference process for COVID-19 epitope prediction. The hybrid architecture combines classical preprocessing for feature transformation with quantum computation for complex pattern recognition, followed by classical post-processing for final classification. The modular design allows for efficient gradient-based optimization while leveraging the expressive power of quantum circuits for feature representation learning.
+
+\end{document}
