@@ -1,68 +1,84 @@
 {
-  "final_accuracy": 0.36666666666666664,
-  "training_time": 11.908708333969116,
+  "final_accuracy": 0.6333333333333333,
+  "training_time": 15.552628993988037,
   "num_epochs": 1,
   "num_samples": 100,
   "num_qubits": 3,
   "test_size": 0.3,
   "sampler_type": "aer",
-  "gpu_type": "B200:8",
+  "gpu_type": "B200",
   "device": "cuda",
   "num_train_samples": 70,
   "num_test_samples": 30,
-  "model_parameters": 30,
+  "model_parameters": 72,
+  "single_gpu_info": {
+    "num_gpus": 1,
+    "use_ddp": false,
+    "batch_size": 128,
+    "base_lr": 0.01,
+    "scaled_lr": 0.01,
+    "training_mode": "Single GPU",
+    "memory_optimization": "Mixed Precision + Auto Cleanup",
+    "quantum_optimization": "B200 Single GPU Sampler Configuration"
+  },
   "training_history": {
     "train_losses": [
-      0.6844568252563477
+      0.7086746692657471
     ],
     "val_losses": [
-      0.7619593143463135
+      0.6760937571525574
     ],
     "train_accuracies": [
-      55.714285714285715
+      44.285714285714285
     ],
     "val_accuracies": [
-      36.666666666666664
+      63.333333333333336
     ],
     "epoch_times": [
-      11.905720233917236
+      15.550369024276733
     ]
+  },
+  "performance_metrics": {
+    "avg_epoch_time": 15.550369024276733,
+    "total_training_time": 15.552628993988037,
+    "samples_per_second": 4.500846771761799,
+    "gpu_efficiency": "128 samples per batch on single GPU"
   },
   "classification_report": {
     "0": {
-      "precision": 0.0,
-      "recall": 0.0,
-      "f1-score": 0.0,
+      "precision": 0.6333333333333333,
+      "recall": 1.0,
+      "f1-score": 0.7755102040816326,
       "support": 19.0
     },
     "1": {
-      "precision": 0.36666666666666664,
-      "recall": 1.0,
-      "f1-score": 0.5365853658536586,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
       "support": 11.0
     },
-    "accuracy": 0.36666666666666664,
+    "accuracy": 0.6333333333333333,
     "macro avg": {
-      "precision": 0.18333333333333332,
+      "precision": 0.31666666666666665,
       "recall": 0.5,
-      "f1-score": 0.2682926829268293,
+      "f1-score": 0.3877551020408163,
       "support": 30.0
     },
     "weighted avg": {
-      "precision": 0.13444444444444445,
-      "recall": 0.36666666666666664,
-      "f1-score": 0.1967479674796748,
+      "precision": 0.4011111111111111,
+      "recall": 0.6333333333333333,
+      "f1-score": 0.49115646258503404,
       "support": 30.0
     }
   },
   "confusion_matrix": [
     [
-      0,
-      19
+      19,
+      0
     ],
     [
-      0,
-      11
+      11,
+      0
     ]
   ]
 }
