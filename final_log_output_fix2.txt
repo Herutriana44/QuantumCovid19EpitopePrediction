@@ -1,0 +1,344 @@
+
+E:\Users\herutriana44\Documents\QuantumCovid19EpitopePrediction>modal run --detach ModalVQC_ExactCopy.py::main
+Note that running a local entrypoint in detached mode only keeps the last triggered Modal function alive after the parent process has been killed or disconnected.
+✓ Initialized. View run at https://modal.com/apps/fpqdboj/main/ap-Wv9rtE7DeqJdV8Z8AZqfrX
+✓ Created objects.
+├── 🔨 Created mount E:\Users\herutriana44\Documents\QuantumCovid19EpitopePrediction\ModalVQC_ExactCopy.py
+├── 🔨 Created function train_vqc_exact.
+└── 🔨 Created function download_results.
+┌─ Modal Warning ─────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ Version 1.1.2 of `modal` has a known major defect. We strongly encourage upgrading to a different version.          │
+└─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+🚀 COVID-19 Epitope Prediction VQC - Modal Deployment (Exact Copy Structure)
+======================================================================
+Starting training...
+✅ Modal log file created: /results/20250915_014415_435.txt
+✅ Local log file created: ./20250915_014415_435.txt
+📝 Training log will be saved to: 20250915_014415_435.txt
+Base directory: QuantumEpitopeCovid19Logs
+🚀 Starting VQC training for COVID-19 Epitope Prediction
+GPU Type: A100
+✅ Aer GPU A100 configuration applied
+📊 Loading dataset...
+/pkg/modal/_runtime/container_io_manager.py:197: DeprecationWarning: Sampler has been deprecated as of Aer 0.15, please use SamplerV2 instead.
+  res = self.finalized_function.callable(*args, **kwargs)
+Dataset loaded: 245852 samples
+Features shape: (245852, 3)
+Labels shape: (245852,)
+Label distribution: [123030 122822]
+Train samples: 172096
+Test samples: 73756
+Number of qubits: 3
+✅ Quantum circuits created:
+  Feature Map: ZZFeatureMap with 3 qubits, reps=2
+  Ansatz: RealAmplitudes with 3 qubits, reps=3
+✅ Optimizer: COBYLA with maxiter=100
+✅ VQC model created
+Training VQC Model...
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+WARNING: Logs may not be continuous
+Training time: 24524.11 seconds
+🔮 Making predictions...
+Test Accuracy: 0.3777 (37.77%)
+✅ Confusion matrix saved to /results/QuantumEpitopeCovid19Logs/confusion_matrix.png
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+Classification report saved to /results/QuantumEpitopeCovid19Logs/classification_report.json
+
+📋 CLASSIFICATION REPORT:
+============================================================
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+/usr/local/lib/python3.11/site-packages/sklearn/metrics/_classification.py:1731: UndefinedMetricWarning: Recall is ill-defined and being set to 0.0 in labels with no true samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, f"{metric.capitalize()} is", result.shape[0])
+              precision    recall  f1-score   support
+
+           0       1.00      0.38      0.55     73756
+           1       0.00      0.00      0.00         0
+
+    accuracy                           0.38     73756
+   macro avg       0.50      0.19      0.27     73756
+weighted avg       1.00      0.38      0.55     73756
+
+============================================================
+
+📊 CONFUSION MATRIX:
+========================================
+Predicted ->
+Actual   0   1
+  0    27858 45898
+  1      0   0
+========================================
+✅ Results saved to /results/QuantumEpitopeCovid19Logs/results.json
+✅ Final log entry written to Modal: /results/20250915_014415_435.txt
+✅ Final log entry written to local: ./20250915_014415_435.txt
+✅ VQC Training completed!
+Final Accuracy: 0.3777
+Training Time: 24524.11s
+Samples processed: 245852 total, 172096 train, 73756 test
+📝 Training log saved to: 20250915_014415_435.txt
+📁 Results saved to: /results/QuantumEpitopeCovid19Logs/
+✅ Training completed with accuracy: 0.3777
+⏱️ Training time: 24524.11 seconds
+
+📥 Downloading results...
+📥 Preparing results for download...
+📋 Files to check for download:
+  - QuantumEpitopeCovid19Logs/results.json
+  - QuantumEpitopeCovid19Logs/classification_report.json
+  - QuantumEpitopeCovid19Logs/confusion_matrix.png
+  - 20250914_053552_620.txt
+  - 20250914_054045_176.txt
+  - 20250914_054455_690.txt
+  - 20250914_054730_509.txt
+  - 20250914_075141_909.txt
+  - 20250914_075557_162.txt
+  - 20250914_140558_102.txt
+  - 20250915_014415_435.txt
+
+📁 Contents of /results directory:
+  - 20250914_053552_620.txt
+  - 20250914_054045_176.txt
+  - 20250914_054455_690.txt
+  - 20250914_054730_509.txt
+  - 20250914_075141_909.txt
+  - 20250914_075557_162.txt
+  - 20250914_140558_102.txt
+  - 20250915_014415_435.txt
+  - QuantumEpitopeCovid19Logs/classification_report.json
+  - QuantumEpitopeCovid19Logs/confusion_matrix.png
+  - QuantumEpitopeCovid19Logs/results.json
+  ✅ Prepared: QuantumEpitopeCovid19Logs/results.json (1111 bytes)
+  ✅ Prepared: QuantumEpitopeCovid19Logs/classification_report.json (448 bytes)
+    ⚠️ Could not parse JSON info from QuantumEpitopeCovid19Logs/classification_report.json: 'training_time'
+  ✅ Prepared: QuantumEpitopeCovid19Logs/confusion_matrix.png (19074 bytes)
+  ✅ Prepared: 20250914_053552_620.txt (2422 bytes)
+  ✅ Prepared: 20250914_054045_176.txt (2422 bytes)
+  ✅ Prepared: 20250914_054455_690.txt (2422 bytes)
+  ✅ Prepared: 20250914_054730_509.txt (824 bytes)
+  ✅ Prepared: 20250914_075141_909.txt (824 bytes)
+  ✅ Prepared: 20250914_075557_162.txt (824 bytes)
+  ✅ Prepared: 20250914_140558_102.txt (2314 bytes)
+  ✅ Prepared: 20250915_014415_435.txt (882 bytes)
+
+📦 Prepared 11 files for download
+📝 Including 8 log file(s) in download
+📦 Download summary: 11 files found
+💾 Saving files to local directory: ./results
+📦 Received 11 files to save
+  📁 Processing: QuantumEpitopeCovid19Logs/results.json
+    📂 Directory created: results\QuantumEpitopeCovid19Logs
+    ✅ Saved: QuantumEpitopeCovid19Logs/results.json (1111 bytes)
+  📁 Processing: QuantumEpitopeCovid19Logs/classification_report.json
+    📂 Directory created: results\QuantumEpitopeCovid19Logs
+    ✅ Saved: QuantumEpitopeCovid19Logs/classification_report.json (448 bytes)
+  📁 Processing: QuantumEpitopeCovid19Logs/confusion_matrix.png
+    📂 Directory created: results\QuantumEpitopeCovid19Logs
+    ✅ Saved: QuantumEpitopeCovid19Logs/confusion_matrix.png (19074 bytes)
+  📁 Processing: 20250914_053552_620.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_053552_620.txt (2422 bytes)
+  📁 Processing: 20250914_054045_176.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_054045_176.txt (2422 bytes)
+  📁 Processing: 20250914_054455_690.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_054455_690.txt (2422 bytes)
+  📁 Processing: 20250914_054730_509.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_054730_509.txt (824 bytes)
+  📁 Processing: 20250914_075141_909.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_075141_909.txt (824 bytes)
+  📁 Processing: 20250914_075557_162.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_075557_162.txt (824 bytes)
+  📁 Processing: 20250914_140558_102.txt
+    📂 Directory created: results
+    ✅ Saved: 20250914_140558_102.txt (2314 bytes)
+  📁 Processing: 20250915_014415_435.txt
+    📂 Directory created: results
+    ✅ Saved: 20250915_014415_435.txt (882 bytes)
+
+✅ Successfully saved 11 files to E:\Users\herutriana44\Documents\QuantumCovid19EpitopePrediction\results
+
+✅ Results downloaded to: E:\Users\herutriana44\Documents\QuantumCovid19EpitopePrediction\results
+✅ Files successfully saved: QuantumEpitopeCovid19Logs/results.json,
+QuantumEpitopeCovid19Logs/classification_report.json, QuantumEpitopeCovid19Logs/confusion_matrix.png,
+20250914_053552_620.txt, 20250914_054045_176.txt, 20250914_054455_690.txt, 20250914_054730_509.txt,
+20250914_075141_909.txt, 20250914_075557_162.txt, 20250914_140558_102.txt, 20250915_014415_435.txt
+
+📊 Training Results:
+  Accuracy: 0.4582
+  Training Time: 41151.10s
+[modal-client] 2025-09-15T08:34:08+0000 Detected 1 background thread(s) [ThreadPoolExecutor-0_0] still running after container exit. This will prevent runner shutdown for up to 30 seconds.
+✓ App completed. View run at https://modal.com/apps/fpqdboj/main/ap-Wv9rtE7DeqJdV8Z8AZqfrX
+
+E:\Users\herutriana44\Documents\QuantumCovid19EpitopePrediction>
